@@ -169,9 +169,19 @@ class Networking(threading.Thread):
 
             time.sleep(60)
 
+class DummyNetwork(threading.Thread):
+    def run(self):
+        LOG.info("Starting Dummy Network Thread")
+        while True:
+            bandwidth = 100
+            with NETLOCK:
+                BANDWIDTH = bandwidth
+
+            time.sleep(60)
+
 if __name__ == "__main__":
     setup_logging()
-    net = Networking()
+    net = DummyNetwork()
     net.start()
     dmx = DMX()
     dmx.start()
