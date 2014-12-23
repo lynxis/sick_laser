@@ -9,6 +9,8 @@ import time
 LOG_FILENAME = "/tmp/light.log"
 
 LOG = logging.getLogger('dmx')
+LOG_SCHRANKE = logging.getLogger('schranke')
+LOG_NETWORK = logging.getLogger('network')
 
 NETLOCK = threading.RLock()
 BANDWIDTH = 0
@@ -94,11 +96,14 @@ class DMX(threading.Thread):
 
             if self._network_bandwidth == 0:
                 self._network_animation = "BLACKOUT"
+                LOG_NETWORK.info("New Animation BLACKOUT")
 
             if self._network_bandwidth > self._network_oldbandwidth:
                 self._network_animation = "UP"
+                LOG_NETWORK.info("New Animation UP")
             else:
                 self._network_animation = "DOWN"
+                LOG_NETWORK.info("New Animation DOWN")
 
         step = self._network_timer % self._network_animation_time
         if self._network_animation == "UP":
