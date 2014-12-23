@@ -68,6 +68,7 @@ class DMX(threading.Thread):
         self._network_oldbandwidth = 0
         self._network_animation_time = 50
         self._network_timer = 0
+        self._network_bandwidth = 0
 
         super(DMX, self).__init__()
 
@@ -87,25 +88,25 @@ class DMX(threading.Thread):
         colors = [255, 0, 0]
 
         if self._network_animation == None:
-            bandwidth = 0
+            self._network_bandwidth = 0
             with NETLOCK:
-                bandwidth = BANDWIDTH
+                self._network_bandwidth = BANDWIDTH
 
-            if bandwidth == 0:
+            if self._network_bandwidth == 0:
                 self._network_animation = "BLACKOUT"
 
-            if bandwidth > self._network_oldbandwidth:
+            if self._network_bandwidth > self._network_oldbandwidth:
                 self._network_animation = "UP"
             else:
                 self._network_animation = "DOWN"
 
-        step = self._network_animation_time / self._network_timer
+        step = self._network_timer % self._network_animation_time
         if self._network_animation == "UP":
             colors = [color * step for color in colors]
         elif self._network_animation == "DOWN":
             colors = [color * step for color in colors]
 
-        if bandwidth == 0:
+        if self._network_bandwidth == 0:
             # animation up
             pass
 
@@ -113,7 +114,7 @@ class DMX(threading.Thread):
             # animation down
             pass
 
-        factor = bandwidth * 1000
+        factor = self._network_bandwidth * 1000
         # rgb
         colors = [factor * val for val in colors]
 
