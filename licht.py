@@ -19,12 +19,13 @@ SCHRANKE_LOCK = threading.RLock()
 SCHRANKE = False
 
 def setup_logging():
-    logging.getLogger('dmx').setLevel(logging.INFO)
     handler = logging.handlers.RotatingFileHandler(
             LOG_FILENAME, maxBytes=100000, backupCount=1)
     line = "%(asctime)s %(name)-20s %(levelname)-8s %(message)s"
     handler.setFormatter(logging.Formatter(line))
-    logging.getLogger('dmx').addHandler(handler)
+    for log in [LOG, LOG_SCHRANKE, LOG_NETWORK]:
+        log.setLevel(logging.INFO)
+        log.addHandler(handler)
 
 class DmxNode(object):
     def __init__(self, offset, width):
