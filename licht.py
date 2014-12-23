@@ -165,4 +165,8 @@ class Networking(threading.Thread):
 
 if __name__ == "__main__":
     setup_logging()
+    net = Networking()
+    net.run()
     dmx = DMX()
+    dmx.run()
+    dmx.join()
