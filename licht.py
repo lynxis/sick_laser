@@ -1,7 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 
 import requests
 import logging
+import logging.handlers
 import threading
 import time
 
@@ -44,7 +45,7 @@ class DmxNode(object):
 
 class Dmx5Light(DmxNode):
     def __init__(self, offset):
-        super().__init__(offset, 5)
+        super(Dmx5Light, self).__init__(offset, 5)
 
     def set_color(self, red, green, blue):
         addr = self._channeloffset
@@ -68,7 +69,7 @@ class DMX(threading.Thread):
         self._network_animation_time = 50
         self._network_timer = 0
 
-        super().__init__()
+        super(DMX, self).__init__()
 
     def lichtschranke(self):
         pass
@@ -132,6 +133,7 @@ class DMX(threading.Thread):
             pass
 
     def run(self):
+        LOG.info("Starting DMX Thread")
         while True:
             self._tick_network()
             self._tick_schranke()
@@ -153,6 +155,7 @@ class Networking(threading.Thread):
         return None
 
     def run(self):
+        LOG.info("Starting Network Thread")
         while True:
             bandwidth = self.get_network()
             with NETLOCK:
