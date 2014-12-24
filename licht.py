@@ -46,6 +46,11 @@ class DmxNode(object):
     def values(self):
         return self._values
 
+class Animation(object):
+    def tick(self):
+        """ called by DMX main thread """
+        pass
+
 class Dmx5Light(DmxNode):
     def __init__(self, offset):
         super(Dmx5Light, self).__init__(offset, 5)
