@@ -1,11 +1,12 @@
 #!/usr/bin/env python2
 
 import logging
-import serial
+from serial import Serial
 import crc16
-from struct import pack
+from struct import pack, unpack
 
 LOG = logging.getLogger('laser')
+MAX_TELEGRAMM_LENGTH = 1024
 
 class TelegrammError(RuntimeError):
     pass
@@ -73,15 +74,10 @@ _ERRORS = {
     0xff: UnknownTelegramError,
     }
 
-class Laser(object):
-    pass
-
-class RK512(object):
-    """ RK512 telegramm used by a Sick Laser S300/S3000 """
-    version = 0.1
 
 class Telegramm(object):
     telegram_types = {"send": 0x41, "fetch": 0x45}
+    answer = 0
 
     def __init__(self, telegram_type="send", destination_address=None, device_address=0x7, coordination_flag=0xff):
         if telegram_type not in self.telegram_types:
@@ -128,7 +124,95 @@ class Telegramm(object):
 
         crc_data = repeating + self._data
         crc = crc16.crc16xmodem(crc_data, 0xffff)
+        crc = pack('<H', crc)
 
         message = head + repeating + crc_data + crc
 
         return message
+
+class ContinousDatagram(Telegramm):
+    def __init__(self, data):
+        """ create a ContinousDatagram from a Buffer """
+        # 4byte nulls, 2byte nulls, size (2byte bigendian), coord (1b), addr(1b)
+        header = unpack('>iHHCC', data[0:10])
+
+        # must be 0
+        if header[0] != 0 or header[1] != 0:
+            return None
+
+        self._destination_address = header[4]
+        self._coordination_flag = header[3]
+        self._size = header[2]
+        # size must be 772 or 392
+        if self._size != 772 or self._size != 392:
+            return None
+        # size is in 16bit words - we would like use bytes instead (size * 2)
+        # leading 4 '0x00' are not included in size (size + 4)
+        self._size = (2 * self._size) + 4
+        if len(data) < self._size:
+            return None
+
+        # little endian
+        # (proto minor, proto major, status(2b), timestamp(4b), telegram number(2b), id messdata (2b) = bb, id
+        # messdata(2b) = 11)
+        header = unpack('<ccHIHHH', data[10:24])
+        self._proto_minor = header[0]
+        self._proto_major = header[1]
+        self._status = header[2]
+        self._timestamp = header[3]
+        self._telegramm_number = header[4]
+
+        # size begins at offset 4 but crc is calculated without crc field (2 byte)
+        self._crc = data[self._size-2:self._size]
+        if crc16.crc16xmodem(data[4:self._size-2]) != self._crc:
+            return None
+
+        self._messdata = data[25:self._size-2]
+
+class Laser(object):
+    SLICE_LEN = 1024
+    def __init__(self, device='/dev/ttyUSB0', baud_rate=38400):
+        self._device = device
+        self._serial = None
+        self._baud_rate = baud_rate
+        self._last_pos = -1
+
+    def connect(self):
+        if not self._serial:
+            self._serial = Serial(self._device, self._baud_rate, timeout=1)
+
+        if not self._serial.isOpen():
+            self._serial.open()
+
+    def disconnect(self):
+        if self._serial and self._serial.isOpen():
+            self._serial.close()
+
+    def send_telegram(self, telegramm):
+        message = None
+        self._serial.write(telegramm.assemble())
+        if telegramm.answer != 0:
+            message = self._serial.read(telegramm.answer)
+        else:
+            message = self._serial.read(MAX_TELEGRAMM_LENGTH)
+
+        return message
+
+    def read_cont(self):
+        messsage = None
+        buf = None
+        if self._last_pos == -1:
+            buf = self._serial.read(self.SLICE_LEN)
+
+        pos = buf.find('\x00\x00\x00\x00\x00\x00\x01\x88\xff\x07')
+        if pos == -1:
+            return None
+
+        if len(buf) - pos > 0:
+            # we got a complete datagram
+            pass
+        else:
+            # read more data into buf
+            buf += self._serial.read(len(buf) - pos)
+
+        dgram = ContinousDatagram(buf)
