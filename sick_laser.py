@@ -77,7 +77,7 @@ _ERRORS = {
 
 class Telegramm(object):
     telegram_types = {"send": 0x41, "fetch": 0x45}
-    answer = 0
+    answer_length = 0
 
     def __init__(self, telegram_type="send", destination_address=None, device_address=0x7, coordination_flag=0xff):
         if telegram_type not in self.telegram_types:
@@ -138,19 +138,20 @@ class ContinousDatagram(Telegramm):
 
         # must be 0
         if header[0] != 0 or header[1] != 0:
-            return None
+            raise TelegrammError("Invalid leading zeros")
 
         self._destination_address = header[4]
         self._coordination_flag = header[3]
         self._size = header[2]
         # size must be 772 or 392
-        if self._size != 772 or self._size != 392:
-            return None
+        if self._size != 772 and self._size != 392:
+            raise TelegrammError("Invalid size (16bit words) for ContinousData valid are %s and not %d - buf %s" % ([392, 772], self._size,
+                data))
         # size is in 16bit words - we would like use bytes instead (size * 2)
         # leading 4 '0x00' are not included in size (size + 4)
         self._size = (2 * self._size) + 4
         if len(data) < self._size:
-            return None
+            raise TelegrammError("data too short len(data) = %d" % len(data))
 
         # little endian
         # (proto minor, proto major, status(2b), timestamp(4b), telegram number(2b), id messdata (2b) = bb, id
@@ -162,15 +163,21 @@ class ContinousDatagram(Telegramm):
         self._timestamp = header[3]
         self._telegramm_number = header[4]
 
-        # size begins at offset 4 but crc is calculated without crc field (2 byte)
-        self._crc = data[self._size-2:self._size]
-        if crc16.crc16xmodem(data[4:self._size-2]) != self._crc:
-            return None
+        # size begins at offset 2 but crc is calculated without crc field (2 byte)
+        self._crc = unpack('<H', data[self._size-2:self._size])[0]
+        crc_calc = crc16.crc16xmodem(data[4:self._size-2], 0xffff)
+        if crc_calc != self._crc:
+            raise TelegrammError("Invalid Crc(data) %s != (calc) %s|size %s" % (self._crc, crc_calc, self._size))
 
-        self._messdata = data[25:self._size-2]
+        self._messdata = data[24:self._size-2]
+        self._data = data
+
+    @property
+    def messdata(self):
+        return self._messdata
 
 class Laser(object):
-    SLICE_LEN = 1024
+    SLICE_LEN = 3096
     def __init__(self, device='/dev/ttyUSB0', baud_rate=38400):
         self._device = device
         self._serial = None
@@ -191,8 +198,8 @@ class Laser(object):
     def send_telegram(self, telegramm):
         message = None
         self._serial.write(telegramm.assemble())
-        if telegramm.answer != 0:
-            message = self._serial.read(telegramm.answer)
+        if telegramm.answer_length != 0:
+            message = self._serial.read(telegramm.answer_length)
         else:
             message = self._serial.read(MAX_TELEGRAMM_LENGTH)
 
@@ -215,4 +222,5 @@ class Laser(object):
             # read more data into buf
             buf += self._serial.read(len(buf) - pos)
 
-        dgram = ContinousDatagram(buf)
+        dgram = ContinousDatagram(buf[pos:])
+        return dgram
