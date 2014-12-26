@@ -134,7 +134,7 @@ class ContinousDatagram(Telegramm):
     def __init__(self, data):
         """ create a ContinousDatagram from a Buffer """
         # 4byte nulls, 2byte nulls, size (2byte bigendian), coord (1b), addr(1b)
-        header = unpack('>iHHCC', data[0:10])
+        header = unpack('>iHHBB', data[0:10])
 
         # must be 0
         if header[0] != 0 or header[1] != 0:
@@ -155,7 +155,7 @@ class ContinousDatagram(Telegramm):
         # little endian
         # (proto minor, proto major, status(2b), timestamp(4b), telegram number(2b), id messdata (2b) = bb, id
         # messdata(2b) = 11)
-        header = unpack('<ccHIHHH', data[10:24])
+        header = unpack('<BBHIHHH', data[10:24])
         self._proto_minor = header[0]
         self._proto_major = header[1]
         self._status = header[2]
