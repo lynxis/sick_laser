@@ -211,7 +211,7 @@ class Laser(object):
         if self._last_pos == -1:
             buf = self._serial.read(self.SLICE_LEN)
 
-        pos = buf.find('\x00\x00\x00\x00\x00\x00\x01\x88\xff\x07')
+        pos = buf.find(b'\x00\x00\x00\x00\x00\x00\x01\x88\xff\x07')
         if pos == -1:
             return None
 
