@@ -40,7 +40,6 @@ if __name__ == '__main__':
 
                 deltavalues, lastvalues = [ abs(l-c) for l,c in zip(lastvalues, values)], values
                 dmxvals = [clipbyte(d*FACTOR + sum(deltavalues[15+i*5:15+(i+1)*5])*0.2*RESPONSE) for i,d in enumerate(dmxvals) ]
-                print([sum(deltavalues[15+i*5:15+(i+1)*5])*0.2*RESPONSE for i,d in enumerate(dmxvals) ])
                 assert len(dmxvals) == 70
 
                 dmx.send_frame(dmxvals+[0]*(512-len(dmxvals)))
