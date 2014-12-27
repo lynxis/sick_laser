@@ -206,7 +206,6 @@ class Laser(object):
         return message
 
     def read_cont(self):
-        messsage = None
         buf = None
         if self._last_pos == -1:
             buf = self._serial.read(self.SLICE_LEN)
