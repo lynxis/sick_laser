@@ -4,6 +4,7 @@ import logging
 from serial import Serial
 import crc16
 from struct import pack, unpack
+from binascii import hexlify
 
 LOG = logging.getLogger('laser')
 MAX_TELEGRAMM_LENGTH = 1024
@@ -231,8 +232,8 @@ if __name__ == '__main__':
         try:
             cont = laser.read_cont()
             if cont:
-                values = [(0.5 * i, unpack('>H', cont.messdata[i*2:i*2+2])[0]) for i in range(len(cont.messdata)/2)]
-                print(values[50])
+                values = [(0.5 * i, unpack('<H', cont.messdata[i*2:i*2+2])[0] & 0x1fff) for i in range(len(cont.messdata)/2)]
+                print(values[190], "=", hexlify(cont.messdata[190*2:191*2]))
         except RuntimeError:
             pass
 
