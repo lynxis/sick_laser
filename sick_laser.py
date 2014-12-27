@@ -230,8 +230,9 @@ if __name__ == '__main__':
     while True:
         try:
             cont = laser.read_cont()
-            values = [(0.5 * i, unpack('>H', cont.messdata[i*2:i*2+2])[0]) for i in range(len(cont.messdata)/2)]
-            print(values[50])
+            if cont:
+                values = [(0.5 * i, unpack('>H', cont.messdata[i*2:i*2+2])[0]) for i in range(len(cont.messdata)/2)]
+                print(values[50])
         except RuntimeError:
             pass
 
