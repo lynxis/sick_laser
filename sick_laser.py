@@ -178,7 +178,7 @@ class ContinousDatagram(Telegramm):
 
 class Laser(object):
     SLICE_LEN = 3096
-    def __init__(self, device='/dev/ttyUSB0', baud_rate=38400):
+    def __init__(self, device='/dev/ttyUSB0', baud_rate=250*1000):
         self._device = device
         self._serial = None
         self._baud_rate = baud_rate
